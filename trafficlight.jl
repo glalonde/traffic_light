@@ -17,11 +17,11 @@ const Vec2 = SVector{2, Float64}
 # State is [position, velocity, time_until_green], action is [Accelerate, Cruise, Brake]
 @with_kw struct TrafficParams
     dt::Float64 = .1
-    period::Float64 = 100
+    period::Float64 = 15
     v_limits::Vec2 = [0.0, 10.0]
     a_limits::Vec2 = [-10.0, 10.0]
     initial_state::Vec2 = [-10, 10]
-    discount::Float64 = .95
+    discount::Float64 = 1.0
 end
 
 # State is [position, velocity, time_until_green], action is [Accelerate, Cruise, Brake]
@@ -64,7 +64,7 @@ end
 
 function POMDPs.isterminal(w::TrafficLight, s::Vec3)
     # End simulation if we blow through a red light or reach the goal
-    return RunningRed(s) || s[1] >= w.goal_position
+    return s[1] >= w.goal_position
 end
 
 function POMDPs.initialstate(w::TrafficLight, rng::AbstractRNG)

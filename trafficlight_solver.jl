@@ -17,11 +17,31 @@ struct TrafficLightPolicy{V} <: Policy
     Qs::Vector{V}
 end
 
+# Return an array of values logspaced from min to max, with the denser values closer to pivot
+function LogSpaceAround(min::T, pivot::T, max::T, num_vals::Int, base::T = T(10)) where {T<:Real}
+    @assert(pivot >= min)
+    @assert(pivot <= max)
+    @assert(num_vals > 0)
+    low_range = log(base, pivot - min + 1)
+    hi_range = log(base, max - pivot + 1)
+    num_low = round(Int64, low_range / (low_range + hi_range) * num_vals)
+    num_hi = num_vals - num_low
+    out = Array{T,1}(undef, num_vals)
+    low_vals = view(out, 1:num_low - 1)
+    hi_vals = view(out, (num_low + 1):num_vals)
+    low_vals .= range(low_range, stop=0, length=num_low)[1:end-1]
+    out[num_low] = pivot
+    hi_vals .= range(0, stop=hi_range, length=num_hi + 1)[2:end]
+    @. low_vals = (base ^ low_vals - 1)*-1 + pivot
+    @. hi_vals = (base ^ hi_vals - 1) + pivot
+    return out
+end
+
 function POMDPs.solve(sol::TrafficWorldSolver, w::TrafficLight)
     # Define a discretization for each of the state variables
-    position_points = range(w.params.initial_state[1], stop=w.goal_position, length=30)
+    @show position_points = LogSpaceAround(w.params.initial_state[1], 0.0, w.goal_position, 45)
     velocity_points = range(w.params.v_limits[1], stop=w.params.v_limits[2], length=30)
-    time_points = range(0, stop=w.params.period, length=30)
+    time_points = LogSpaceAround(-w.params.period, 0.0, w.params.period, 60)
     grid = RectangleGrid(position_points, velocity_points, time_points)
     sol.value_hist = []
     data = zeros(length(grid))
